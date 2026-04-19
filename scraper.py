@@ -1,7 +1,7 @@
-"""
+“””
 Watch Deal Scanner — Vinted PT + FR
 Usa vinted-scraper para contornar bloqueios de cookie
-"""
+“””
 
 import json
 import time
@@ -10,166 +10,215 @@ from datetime import datetime
 from pathlib import Path
 
 try:
-    from vinted_scraper import VintedScraper
-    SCRAPER_AVAILABLE = True
+from vinted_scraper import VintedScraper
+SCRAPER_AVAILABLE = True
 except ImportError:
-    SCRAPER_AVAILABLE = False
-    print("vinted-scraper nao instalado")
+SCRAPER_AVAILABLE = False
+print(“vinted-scraper nao instalado”)
 
 PRICE_DB = {
-    "moonswatch": (60, 120, 180),
-    "bioceramic": (60, 120, 180),
-    "cold moon": (150, 250, 350),
-    "earthphase": (150, 280, 400),
-    "seiko kinetic sportura": (40, 90, 160),
-    "seiko flightmaster": (50, 120, 200),
-    "seiko kinetic": (30, 80, 130),
-    "seiko 7t62": (40, 100, 170),
-    "seiko sna": (40, 100, 160),
-    "citizen promaster nighthawk": (80, 150, 220),
-    "citizen wingman": (20, 60, 120),
-    "citizen navihawk": (60, 140, 220),
-    "lip mach 2000": (80, 200, 350),
-    "lip mach": (60, 180, 320),
-    "montre lip": (40, 120, 200),
-    "yema flygraf": (100, 250, 450),
-    "yema rallygraf": (80, 200, 380),
-    "yema superman": (80, 220, 400),
-    "yema": (40, 120, 220),
-    "garel": (20, 60, 120),
-    "sicura": (30, 80, 160),
-    "casio vintage": (15, 50, 90),
-    "swatch chrono": (20, 60, 120),
-    "swatch automatic": (25, 70, 130),
-    "swatch irony": (20, 55, 100),
-    "swatch vintage": (15, 50, 100),
+# MoonSwatch / Omega colabs
+“mission to the moon swatch”: (60, 120, 180),
+“moonswatch bioceramic”: (60, 120, 180),
+“mission to moonphase”: (150, 280, 400),
+“swatch x omega”: (80, 160, 250),
+# Seiko
+“seiko kinetic sportura”: (40, 90, 160),
+“seiko flightmaster”: (50, 120, 200),
+“seiko kinetic”: (30, 80, 130),
+“seiko 7t62”: (40, 100, 170),
+“seiko sna411”: (40, 100, 160),
+“seiko sna413”: (40, 100, 160),
+# Citizen
+“citizen promaster nighthawk”: (80, 150, 220),
+“citizen navihawk”: (60, 140, 220),
+“citizen wingman”: (20, 60, 120),
+# LIP
+“lip mach 2000”: (80, 200, 350),
+“montre lip mach”: (60, 180, 320),
+# Yema
+“yema flygraf”: (100, 250, 450),
+“yema rallygraf”: (80, 200, 380),
+“yema superman”: (80, 220, 400),
+“yema navygraf”: (80, 200, 380),
+# Swatch vintage
+“swatch chrono scg”: (20, 60, 120),
+“swatch irony automatic”: (25, 70, 130),
+“swatch automatic”: (25, 70, 130),
+# Outros
+“sicura automatic”: (30, 80, 160),
+“casio vintage calculator”: (15, 50, 90),
+“casio dw5600”: (20, 60, 110),
+“casio royale”: (20, 55, 100),
+}
+
+# IDs de categoria Vinted para relógios
+
+# PT: verificar em vinted.pt filtrando por Acessórios > Relógios
+
+CATALOG_IDS = {
+“PT”: [“2285”],   # Relógios homem PT — confirmar no URL da Vinted PT
+“FR”: [“2285”],   # Relógios homem FR — confirmar no URL da Vinted FR
 }
 
 DOMAINS = [
-    ("https://www.vinted.pt", "PT"),
-    ("https://www.vinted.fr", "FR"),
+(“https://www.vinted.pt”, “PT”),
+(“https://www.vinted.fr”, “FR”),
 ]
 
+# Palavras no título que indicam que não é um relógio
+
+JUNK_KEYWORDS = [
+“capa”, “case”, “strap”, “bracelet”, “pulseira”, “correa”,
+“t-shirt”, “shirt”, “poster”, “livre”, “book”, “boite”, “box only”,
+“sticker”, “pin”, “lego”, “figurine”, “funko”, “pelicula”,
+“perfume”, “eau de”, “cologne”,
+]
+
+def is_junk(title: str) -> bool:
+t = title.lower()
+return any(kw in t for kw in JUNK_KEYWORDS)
 
 def score_deal(price, min_buy, max_buy, sell_target):
-    if price <= min_buy:
-        rating, color, score = "EXCELENTE", "#00ff88", 3
-    elif price <= max_buy:
-        margin = ((sell_target - price) / price) * 100
-        if margin >= 40:
-            rating, color, score = "BOM", "#7fff7f", 2
-        else:
-            rating, color, score = "RAZOAVEL", "#ffd700", 1
-    else:
-        rating, color, score = "CARO", "#ff6666", 0
-    margin_pct = round(((sell_target - price) / price) * 100, 1) if price > 0 else 0
-    return {"rating": rating, "color": color, "score": score,
-            "margin_pct": margin_pct, "sell_target": sell_target}
-
+if price <= min_buy:
+rating, color, score = “EXCELENTE”, “#00ff88”, 3
+elif price <= max_buy:
+margin = ((sell_target - price) / price) * 100
+if margin >= 40:
+rating, color, score = “BOM”, “#7fff7f”, 2
+else:
+rating, color, score = “RAZOAVEL”, “#ffd700”, 1
+else:
+rating, color, score = “CARO”, “#ff6666”, 0
+margin_pct = round(((sell_target - price) / price) * 100, 1) if price > 0 else 0
+return {“rating”: rating, “color”: color, “score”: score,
+“margin_pct”: margin_pct, “sell_target”: sell_target}
 
 def run_scan():
-    results = []
-    seen_ids = set()
+results = []
+seen_ids = set()
 
-    if not SCRAPER_AVAILABLE:
-        print("ERRO: vinted-scraper nao disponivel")
-        return results
-
-    for base_url, domain_label in DOMAINS:
-        print(f"Vinted {domain_label}")
-        try:
-            scraper = VintedScraper(base_url)
-        except Exception as e:
-            print(f"Erro scraper {domain_label}: {e}")
-            continue
-
-        for keyword, (min_buy, max_buy, sell_target) in PRICE_DB.items():
-            print(f"  {keyword}")
-            try:
-                params = {
-                    "search_text": keyword,
-                    "order": "newest_first",
-                    "price_to": str(int(max_buy * 1.3)),
-                    "currency": "EUR",
-                }
-                items = scraper.search(params)
-                if not items:
-                    time.sleep(random.uniform(1, 2))
-                    continue
-
-                for item in items:
-                    try:
-                        item_id = str(getattr(item, "id", "") or "")
-                        uid = f"{domain_label}_{item_id}"
-                        if uid in seen_ids:
-                            continue
-                        seen_ids.add(uid)
-
-                        price = float(getattr(item, "price", 0) or 0)
-                        if price <= 0:
-                            continue
-
-                        deal = score_deal(price, min_buy, max_buy, sell_target)
-                        if deal["score"] < 1:
-                            continue
-
-                        photo = getattr(item, "photo", "") or ""
-                        if hasattr(photo, "url"):
-                            photo = photo.url
-                        elif isinstance(photo, dict):
-                            photo = photo.get("url", "")
-
-                        url = getattr(item, "url", "") or f"{base_url}/items/{item_id}"
-                        brand = str(getattr(item, "brand_title", "") or "")
-                        title = str(getattr(item, "title", "") or "")
-
-                        results.append({
-                            "id": item_id,
-                            "domain": domain_label,
-                            "keyword": keyword,
-                            "title": title,
-                            "price": price,
-                            "url": url,
-                            "photo": str(photo),
-                            "brand": brand,
-                            "score": deal["score"],
-                            "rating": deal["rating"],
-                            "color": deal["color"],
-                            "margin_pct": deal["margin_pct"],
-                            "sell_target": deal["sell_target"],
-                            "min_buy": min_buy,
-                            "max_buy": max_buy,
-                            "scanned_at": datetime.utcnow().isoformat(),
-                        })
-                    except Exception as e:
-                        print(f"    item error: {e}")
-
-            except Exception as e:
-                print(f"  search error '{keyword}': {e}")
-
-            time.sleep(random.uniform(2, 4))
-
-    results.sort(key=lambda x: (x["score"], x["margin_pct"]), reverse=True)
+```
+if not SCRAPER_AVAILABLE:
+    print("ERRO: vinted-scraper nao disponivel")
     return results
 
+for base_url, domain_label in DOMAINS:
+    print(f"\nVinted {domain_label}")
+    catalog_ids = CATALOG_IDS.get(domain_label, [])
+
+    try:
+        scraper = VintedScraper(base_url)
+    except Exception as e:
+        print(f"Erro scraper {domain_label}: {e}")
+        continue
+
+    for keyword, (min_buy, max_buy, sell_target) in PRICE_DB.items():
+        print(f"  Pesquisar: {keyword}")
+        try:
+            params = {
+                "search_text": keyword,
+                "order": "newest_first",
+                "price_from": "5",
+                "price_to": str(int(max_buy * 1.3)),
+                "currency": "EUR",
+            }
+            # Força categoria relógios
+            if catalog_ids:
+                params["catalog[]"] = catalog_ids[0]
+
+            items = scraper.search(params)
+            if not items:
+                time.sleep(random.uniform(1, 2))
+                continue
+
+            found = 0
+            for item in items:
+                try:
+                    item_id = str(getattr(item, "id", "") or "")
+                    uid = f"{domain_label}_{item_id}"
+                    if uid in seen_ids:
+                        continue
+                    seen_ids.add(uid)
+
+                    title = str(getattr(item, "title", "") or "")
+
+                    # Filtra lixo não relacionado com relógios
+                    if is_junk(title):
+                        continue
+
+                    price = float(getattr(item, "price", 0) or 0)
+                    if price <= 0:
+                        continue
+
+                    deal = score_deal(price, min_buy, max_buy, sell_target)
+                    if deal["score"] < 1:
+                        continue
+
+                    photo = getattr(item, "photo", "") or ""
+                    if hasattr(photo, "url"):
+                        photo = photo.url
+                    elif isinstance(photo, dict):
+                        photo = photo.get("url", "")
+
+                    url = getattr(item, "url", "") or f"{base_url}/items/{item_id}"
+                    brand = str(getattr(item, "brand_title", "") or "")
+
+                    results.append({
+                        "id": item_id,
+                        "domain": domain_label,
+                        "keyword": keyword,
+                        "title": title,
+                        "price": price,
+                        "url": url,
+                        "photo": str(photo),
+                        "brand": brand,
+                        "score": deal["score"],
+                        "rating": deal["rating"],
+                        "color": deal["color"],
+                        "margin_pct": deal["margin_pct"],
+                        "sell_target": deal["sell_target"],
+                        "min_buy": min_buy,
+                        "max_buy": max_buy,
+                        "scanned_at": datetime.utcnow().isoformat(),
+                    })
+                    found += 1
+
+                except Exception as e:
+                    print(f"    item error: {e}")
+
+            if found:
+                print(f"    → {found} resultados válidos")
+
+        except Exception as e:
+            print(f"  search error '{keyword}': {e}")
+
+        time.sleep(random.uniform(2, 4))
+
+results.sort(key=lambda x: (x["score"], x["margin_pct"]), reverse=True)
+return results
+```
 
 def generate_html(results, output_path):
-    now = datetime.utcnow().strftime("%d/%m/%Y %H:%M UTC")
-    total = len(results)
-    excellent = sum(1 for r in results if r["score"] == 3)
-    good = sum(1 for r in results if r["score"] == 2)
+now = datetime.utcnow().strftime(”%d/%m/%Y %H:%M UTC”)
+total = len(results)
+excellent = sum(1 for r in results if r[“score”] == 3)
+good = sum(1 for r in results if r[“score”] == 2)
 
-    cards_html = ""
-    if not results:
-        cards_html = '<div class="empty"><div class="empty-icon">&#8987;</div><p>Nenhum resultado encontrado neste scan.</p><p class="empty-sub">A Vinted pode estar a bloquear temporariamente. Tenta mais tarde.</p></div>'
-    else:
-        for r in results:
-            photo_html = f'<img src="{r["photo"]}" alt="" onerror="this.style.display=\'none\'">' if r["photo"] else '<div class="no-photo">&#8987;</div>'
-            margin_str = f"+{r['margin_pct']}%" if r['margin_pct'] > 0 else f"{r['margin_pct']}%"
-            emoji = {"EXCELENTE": "🔥", "BOM": "✅", "RAZOAVEL": "⚠️"}.get(r["rating"], "")
-            cards_html += f'<a class="card score-{r["score"]}" href="{r["url"]}" target="_blank" rel="noopener"><div class="card-photo">{photo_html}</div><div class="card-body"><div class="card-badge" style="background:{r["color"]}">{emoji} {r["rating"]}</div><h3 class="card-title">{r["title"]}</h3><div class="card-meta"><span class="card-brand">{r["brand"]}</span><span class="card-domain">{r["domain"]}</span></div><div class="card-keyword">🔍 {r["keyword"]}</div><div class="card-prices"><div class="price-main">€{r["price"]:.0f}</div><div class="price-target"><span class="label">Vender ~</span><span class="value">€{r["sell_target"]:.0f}</span><span class="margin" style="color:{r["color"]}">{margin_str}</span></div></div><div class="price-range">Comprar até €{r["max_buy"]:.0f} para margem</div></div></a>'
+```
+cards_html = ""
+if not results:
+    cards_html = '<div class="empty"><div class="empty-icon">&#8987;</div><p>Nenhum resultado encontrado neste scan.</p><p class="empty-sub">A Vinted pode estar a bloquear temporariamente. Tenta mais tarde.</p></div>'
+else:
+    for r in results:
+        photo_html = f'<img src="{r["photo"]}" alt="" onerror="this.style.display=\'none\'">' if r["photo"] else '<div class="no-photo">&#8987;</div>'
+        margin_str = f"+{r['margin_pct']}%" if r['margin_pct'] > 0 else f"{r['margin_pct']}%"
+        emoji = {"EXCELENTE": "🔥", "BOM": "✅", "RAZOAVEL": "⚠️"}.get(r["rating"], "")
+        cards_html += f'<a class="card score-{r["score"]}" href="{r["url"]}" target="_blank" rel="noopener"><div class="card-photo">{photo_html}</div><div class="card-body"><div class="card-badge" style="background:{r["color"]}">{emoji} {r["rating"]}</div><h3 class="card-title">{r["title"]}</h3><div class="card-meta"><span class="card-brand">{r["brand"]}</span><span class="card-domain">{r["domain"]}</span></div><div class="card-keyword">🔍 {r["keyword"]}</div><div class="card-prices"><div class="price-main">€{r["price"]:.0f}</div><div class="price-target"><span class="label">Vender ~</span><span class="value">€{r["sell_target"]:.0f}</span><span class="margin" style="color:{r["color"]}">{margin_str}</span></div></div><div class="price-range">Comprar até €{r["max_buy"]:.0f} para margem</div></div></a>'
 
-    html = f"""<!DOCTYPE html>
+html = f"""<!DOCTYPE html>
+```
+
 <html lang="pt">
 <head>
 <meta charset="UTF-8">
@@ -247,17 +296,18 @@ footer{{padding:2rem 2.5rem;border-top:1px solid var(--border);display:flex;just
 function filterCards(val,btn){{document.querySelectorAll('.filter-btn').forEach(b=>b.classList.remove('active'));btn.classList.add('active');document.querySelectorAll('.card').forEach(card=>{{if(val==='all'){{card.classList.remove('hidden');return}}if(val==='PT'||val==='FR'){{const d=card.querySelector('.card-domain');card.classList.toggle('hidden',!d||!d.textContent.includes(val));}}else{{card.classList.toggle('hidden',!card.classList.contains('score-'+val));}}}})}}</script>
 </body></html>"""
 
-    Path(output_path).parent.mkdir(parents=True, exist_ok=True)
-    with open(output_path, "w", encoding="utf-8") as f:
-        f.write(html)
-    print(f"Dashboard: {output_path}")
+```
+Path(output_path).parent.mkdir(parents=True, exist_ok=True)
+with open(output_path, "w", encoding="utf-8") as f:
+    f.write(html)
+print(f"Dashboard: {output_path}")
+```
 
-
-if __name__ == "__main__":
-    print(f"Watch Deal Scanner — {len(PRICE_DB)} keywords")
-    results = run_scan()
-    print(f"{len(results)} oportunidades encontradas")
-    generate_html(results, "docs/index.html")
-    with open("docs/results.json", "w", encoding="utf-8") as f:
-        json.dump(results, f, ensure_ascii=False, indent=2)
-    print("Concluido!")
+if **name** == “**main**”:
+print(f”Watch Deal Scanner — {len(PRICE_DB)} keywords”)
+results = run_scan()
+print(f”{len(results)} oportunidades encontradas”)
+generate_html(results, “docs/index.html”)
+with open(“docs/results.json”, “w”, encoding=“utf-8”) as f:
+json.dump(results, f, ensure_ascii=False, indent=2)
+print(“Concluido!”)
