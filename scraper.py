@@ -1,16 +1,20 @@
 """
 Watch Deal Scanner — Vinted PT + FR
-Pesquisa relógios subvalorizados e gera dashboard HTML
+Usa vinted-scraper para contornar bloqueios de cookie
 """
 
 import json
 import time
 import random
-import urllib.request
-import urllib.parse
-import urllib.error
 from datetime import datetime
 from pathlib import Path
+
+try:
+    from vinted_scraper import VintedScraper
+    SCRAPER_AVAILABLE = True
+except ImportError:
+    SCRAPER_AVAILABLE = False
+    print("❌ vinted-scraper não instalado — corre: pip install vinted-scraper")
 
 # ─────────────────────────────────────────────
 #  PRICE DATABASE — valor real de mercado (€)
