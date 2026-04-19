@@ -1,8 +1,3 @@
-“””
-Watch Deal Scanner — Vinted PT + FR
-Usa vinted-scraper para contornar bloqueios de cookie
-“””
-
 import json
 import time
 import random
