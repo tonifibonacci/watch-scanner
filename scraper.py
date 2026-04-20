@@ -12,28 +12,58 @@ except ImportError:
     print("vinted-scraper nao instalado")
 
 PRICE_DB = {
-    "mission to the moon swatch": (60, 120, 180),
-    "moonswatch bioceramic": (60, 120, 180),
-    "mission to moonphase": (150, 280, 400),
+    # Swatch / Omega
     "swatch x omega": (80, 160, 250),
+    # Seiko
     "seiko kinetic sportura": (40, 90, 160),
     "seiko flightmaster": (50, 120, 200),
     "seiko kinetic": (30, 80, 130),
     "seiko 7t62": (40, 100, 170),
     "seiko sna411": (40, 100, 160),
     "seiko sna413": (40, 100, 160),
+    "seiko tv case": (60, 150, 250),
+    "seiko tvcase": (60, 150, 250),
+    "seiko rectangle": (40, 100, 180),
+    "seiko lord matic": (40, 100, 180),
+    "seiko bellmatic": (50, 120, 200),
+    "seiko actus": (30, 80, 150),
+    "seiko seahorse": (30, 80, 150),
+    "seiko pogue": (80, 200, 350),
+    "seiko 6139": (50, 130, 220),
+    "seiko 5 automatic": (20, 60, 110),
+    # Citizen
     "citizen promaster nighthawk": (80, 150, 220),
     "citizen navihawk": (60, 140, 220),
     "citizen wingman": (20, 60, 120),
+    # LIP
     "lip mach 2000": (80, 200, 350),
     "montre lip mach": (60, 180, 320),
+    # Yema
     "yema flygraf": (100, 250, 450),
     "yema rallygraf": (80, 200, 380),
     "yema superman": (80, 220, 400),
     "yema navygraf": (80, 200, 380),
+    # Swatch vintage
     "swatch chrono scg": (20, 60, 120),
     "swatch irony automatic": (25, 70, 130),
     "swatch automatic": (25, 70, 130),
+    # Garel
+    "garel automatic": (30, 80, 150),
+    "garel vintage": (25, 70, 130),
+    "montre garel": (20, 60, 120),
+    # Longines
+    "longines automatic vintage": (80, 200, 380),
+    "longines conquest vintage": (100, 250, 450),
+    "longines ultra-chron": (80, 220, 400),
+    "longines admiral": (60, 160, 300),
+    "longines flagship vintage": (60, 150, 280),
+    # Tissot
+    "tissot pr516": (60, 150, 280),
+    "tissot seastar vintage": (50, 130, 240),
+    "tissot navigator": (80, 200, 350),
+    "tissot visodate": (40, 100, 180),
+    "tissot sideral": (60, 160, 300),
+    # Outros
     "sicura automatic": (30, 80, 160),
     "casio vintage calculator": (15, 50, 90),
     "casio dw5600": (20, 60, 110),
@@ -54,7 +84,7 @@ JUNK_KEYWORDS = [
     "capa", "case", "strap", "bracelet", "pulseira", "correa",
     "t-shirt", "shirt", "poster", "livre", "book", "boite", "box only",
     "sticker", "pin", "lego", "figurine", "funko", "pelicula",
-    "perfume", "eau de", "cologne",
+    "perfume", "eau de", "cologne","livre", "jeu", "manga", "comics", "polo", "pull", "sweat", "veste", "jacket", "decal", "autocollant", "miniature", "figurine", "bd",
 ]
 
 
@@ -235,6 +265,10 @@ def generate_html(results, output_path):
         '.stat-val{font-family:var(--mono);font-size:2rem;font-weight:700;margin-bottom:.35rem}'
         '.stat-val.fire{color:#00ff88}.stat-val.good{color:#7fff7f}.stat-val.total{color:var(--accent)}'
         '.stat-label{font-size:.7rem;color:var(--text-dim);text-transform:uppercase;letter-spacing:.12em}'
+        '.search-bar{padding:0 2.5rem 1rem;}'
+        '.search-input{width:100%;background:var(--surface);border:1px solid var(--border);color:var(--text);padding:.75rem 1.25rem;border-radius:8px;font-size:.9rem;font-family:var(--sans);outline:none;transition:border-color .15s}'
+        '.search-input:focus{border-color:var(--accent)}'
+        '.search-input::placeholder{color:var(--text-dim)}'
         '.filters{padding:0 2.5rem 1.5rem;display:flex;gap:.5rem;flex-wrap:wrap;align-items:center}'
         '.filter-label{font-size:.7rem;color:var(--text-dim);text-transform:uppercase;letter-spacing:.1em;margin-right:.5rem}'
         '.filter-btn{background:var(--surface);border:1px solid var(--border);color:var(--text-dim);padding:.4rem 1rem;border-radius:999px;font-size:.78rem;cursor:pointer;transition:all .15s}'
@@ -260,6 +294,7 @@ def generate_html(results, output_path):
         '.empty{grid-column:1/-1;text-align:center;padding:5rem 2rem;background:var(--surface)}'
         '.empty-icon{font-size:3rem;margin-bottom:1rem;opacity:.3}'
         '.empty-sub{color:var(--text-dim);font-size:.85rem;margin-top:.5rem}'
+        '.no-results{grid-column:1/-1;text-align:center;padding:3rem;color:var(--text-dim);font-family:var(--mono);font-size:.85rem}'
         'footer{padding:2rem 2.5rem;border-top:1px solid var(--border);display:flex;justify-content:space-between;font-size:.72rem;color:var(--text-dim);font-family:var(--mono);flex-wrap:wrap;gap:.5rem}'
         '.hidden{display:none!important}'
         '</style>'
@@ -274,14 +309,17 @@ def generate_html(results, output_path):
         '<div class="stat"><div class="stat-val fire">' + str(excellent) + '</div><div class="stat-label">🔥 Excelente</div></div>'
         '<div class="stat"><div class="stat-val good">' + str(good) + '</div><div class="stat-label">✅ Bom negocio</div></div>'
         '</div>'
+        '<div class="search-bar">'
+        '<input class="search-input" type="text" id="searchInput" placeholder="Pesquisar por titulo, marca, keyword..." oninput="applyFilters()">'
+        '</div>'
         '<div class="filters">'
         '<span class="filter-label">Filtrar:</span>'
-        '<button class="filter-btn active" onclick="filterCards(\'all\',this)">Todos</button>'
-        '<button class="filter-btn" onclick="filterCards(\'3\',this)">🔥 Excelente</button>'
-        '<button class="filter-btn" onclick="filterCards(\'2\',this)">✅ Bom</button>'
-        '<button class="filter-btn" onclick="filterCards(\'1\',this)">⚠️ Razoavel</button>'
-        '<button class="filter-btn" onclick="filterCards(\'PT\',this)">Vinted PT</button>'
-        '<button class="filter-btn" onclick="filterCards(\'FR\',this)">Vinted FR</button>'
+        '<button class="filter-btn active" onclick="setFilter(\'all\',this)">Todos</button>'
+        '<button class="filter-btn" onclick="setFilter(\'3\',this)">🔥 Excelente</button>'
+        '<button class="filter-btn" onclick="setFilter(\'2\',this)">✅ Bom</button>'
+        '<button class="filter-btn" onclick="setFilter(\'1\',this)">⚠️ Razoavel</button>'
+        '<button class="filter-btn" onclick="setFilter(\'PT\',this)">Vinted PT</button>'
+        '<button class="filter-btn" onclick="setFilter(\'FR\',this)">Vinted FR</button>'
         '</div>'
         '<div class="grid" id="grid">' + cards_html + '</div>'
         '<footer>'
@@ -289,7 +327,36 @@ def generate_html(results, output_path):
         '<span>Precos estimados - verificar sempre antes de comprar</span>'
         '</footer>'
         '<script>'
-        'function filterCards(val,btn){document.querySelectorAll(".filter-btn").forEach(b=>b.classList.remove("active"));btn.classList.add("active");document.querySelectorAll(".card").forEach(card=>{if(val==="all"){card.classList.remove("hidden");return}if(val==="PT"||val==="FR"){const d=card.querySelector(".card-domain");card.classList.toggle("hidden",!d||!d.textContent.includes(val));}else{card.classList.toggle("hidden",!card.classList.contains("score-"+val));}})}  '
+        'var activeFilter = "all";'
+        'function setFilter(val, btn) {'
+        '  document.querySelectorAll(".filter-btn").forEach(b => b.classList.remove("active"));'
+        '  btn.classList.add("active");'
+        '  activeFilter = val;'
+        '  applyFilters();'
+        '}'
+        'function applyFilters() {'
+        '  var query = document.getElementById("searchInput").value.toLowerCase();'
+        '  var cards = document.querySelectorAll(".card");'
+        '  var visible = 0;'
+        '  cards.forEach(function(card) {'
+        '    var title = (card.querySelector(".card-title") ? card.querySelector(".card-title").textContent : "").toLowerCase();'
+        '    var brand = (card.querySelector(".card-brand") ? card.querySelector(".card-brand").textContent : "").toLowerCase();'
+        '    var keyword = (card.querySelector(".card-keyword") ? card.querySelector(".card-keyword").textContent : "").toLowerCase();'
+        '    var matchSearch = !query || title.includes(query) || brand.includes(query) || keyword.includes(query);'
+        '    var matchFilter = true;'
+        '    if (activeFilter === "PT" || activeFilter === "FR") {'
+        '      var d = card.querySelector(".card-domain");'
+        '      matchFilter = d && d.textContent.includes(activeFilter);'
+        '    } else if (activeFilter !== "all") {'
+        '      matchFilter = card.classList.contains("score-" + activeFilter);'
+        '    }'
+        '    var show = matchSearch && matchFilter;'
+        '    card.classList.toggle("hidden", !show);'
+        '    if (show) visible++;'
+        '  });'
+        '  var noRes = document.getElementById("no-results");'
+        '  if (noRes) noRes.classList.toggle("hidden", visible > 0);'
+        '}'
         '</script>'
         '</body></html>'
     )
