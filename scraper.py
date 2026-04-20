@@ -85,6 +85,7 @@ JUNK_KEYWORDS = [
     "t-shirt", "shirt", "poster", "livre", "book", "boite", "box only",
     "sticker", "pin", "lego", "figurine", "funko", "pelicula",
     "perfume", "eau de", "cologne","livre", "jeu", "manga", "comics", "polo", "pull", "sweat", "veste", "jacket", "decal", "autocollant", "miniature", "figurine", "bd",
+    "waveceptor", "wave ceptor","scatola","solaire", "occhiali", "lunettes", "glasses", "verre","boite", "caixa", "box", "etui", "case vide","chaussure",
 ]
 
 
