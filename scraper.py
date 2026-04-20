@@ -66,6 +66,34 @@ PRICE_DB = {
     "casio dw5600":                ("casio", 20, 60, 110),
     "casio royale":                ("casio", 20, 55, 100),
     "casio databank":              ("casio", 15, 45, 85),
+    "casio mtg":                   ("casio", 60, 150, 280),
+    "casio edifice":               ("casio", 30, 80, 150),
+    "casio oceanus":               ("casio", 80, 200, 380),
+    "casio g-shock mudmaster":     ("casio", 80, 180, 320),
+    "casio g-shock gulfmaster":    ("casio", 80, 180, 320),
+    "casio pro trek":              ("casio", 50, 120, 220),
+    "casio a500":                  ("casio", 20, 55, 100),
+    "casio f91w":                  ("casio", 10, 30, 60),
+    # Omega
+    "omega seamaster vintage":     ("omega", 200, 500, 900),
+    "omega constellation vintage": ("omega", 150, 400, 750),
+    "omega dynamic":               ("omega", 100, 280, 520),
+    "omega de ville vintage":      ("omega", 120, 320, 600),
+    "omega geneve":                ("omega", 100, 250, 480),
+    "omega automatic vintage":     ("omega", 150, 400, 750),
+    # Tudor
+    "tudor oysterdate":            ("tudor", 200, 500, 950),
+    "tudor prince":                ("tudor", 150, 400, 800),
+    "tudor ranger":                ("tudor", 300, 700, 1300),
+    "tudor submariner vintage":    ("tudor", 500, 1200, 2200),
+    "tudor advisor":               ("tudor", 200, 500, 950),
+    # Tag Heuer
+    "tag heuer formula 1 vintage": ("tag heuer", 100, 250, 450),
+    "tag heuer 1000":              ("tag heuer", 150, 350, 650),
+    "tag heuer 2000":              ("tag heuer", 100, 280, 520),
+    "tag heuer autavia vintage":   ("tag heuer", 300, 700, 1400),
+    "tag heuer carrera vintage":   ("tag heuer", 250, 600, 1200),
+    "tag heuer monza vintage":     ("tag heuer", 200, 500, 950),
 }
 
 
