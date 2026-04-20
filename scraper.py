@@ -41,8 +41,8 @@ PRICE_DB = {
 }
 
 CATALOG_IDS = {
-    "PT": "2285",
-    "FR": "2285",
+    "PT": "97",
+    "FR": "97",
 }
 
 DOMAINS = [
