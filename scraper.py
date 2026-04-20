@@ -11,17 +11,7 @@ except ImportError:
     SCRAPER_AVAILABLE = False
     print("vinted-scraper nao instalado")
     
-BRAND_IDS = {
-    "seiko": "1530",
-    "longines": "613",
-    "tissot": "1626",
-    "yema": "2436",
-    "lip": "604",
-    "citizen": "302",
-    "swatch": "1574",
-    "casio": "254",
-    "garel": "428",
-}
+
 
 PRICE_DB = {
     # Swatch
@@ -79,10 +69,6 @@ PRICE_DB = {
 }
 
 
-CATALOG_IDS = {
-    "PT": "97",
-    "FR": "97",
-}
 
 DOMAINS = [
     ("https://www.vinted.pt", "PT"),
@@ -146,9 +132,6 @@ def run_scan():
                     "currency": "EUR",
                     "catalog[]": "97",
                 }
-                brand_id = BRAND_IDS.get(brand, "")
-                if brand_id:
-                    params["brand_ids[]"] = brand_id
 
                 items = scraper.search(params)
                 if not items:
@@ -165,6 +148,12 @@ def run_scan():
                         seen_ids.add(uid)
 
                         title = str(getattr(item, "title", "") or "")
+                        item_brand = str(getattr(item, "brand_title", "") or "").lower()
+
+                        # Filtra por marca — só aceita se a marca do item corresponder
+                        if item_brand and brand not in item_brand:
+                            continue
+
                         if is_junk(title):
                             continue
 
@@ -183,7 +172,6 @@ def run_scan():
                             photo = photo.get("url", "")
 
                         url = getattr(item, "url", "") or base_url + "/items/" + item_id
-                        item_brand = str(getattr(item, "brand_title", "") or brand)
 
                         results.append({
                             "id": item_id,
@@ -193,7 +181,7 @@ def run_scan():
                             "price": price,
                             "url": url,
                             "photo": str(photo),
-                            "brand": item_brand,
+                            "brand": item_brand or brand,
                             "score": deal["score"],
                             "rating": deal["rating"],
                             "color": deal["color"],
