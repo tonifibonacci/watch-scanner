@@ -10,65 +10,74 @@ try:
 except ImportError:
     SCRAPER_AVAILABLE = False
     print("vinted-scraper nao instalado")
+    
+BRAND_IDS = {
+    "seiko": "1530",
+    "longines": "613",
+    "tissot": "1626",
+    "yema": "2436",
+    "lip": "604",
+    "citizen": "302",
+    "swatch": "1574",
+    "casio": "254",
+    "garel": "428",
+}
 
 PRICE_DB = {
-    # Swatch / Omega
-    "swatch x omega": (80, 160, 250),
+    # Swatch
+    "swatch x omega":        ("swatch", 80, 160, 250),
+    "swatch chrono scg":     ("swatch", 20, 60, 120),
+    "swatch irony automatic":("swatch", 25, 70, 130),
+    "swatch automatic":      ("swatch", 25, 70, 130),
     # Seiko
-    "seiko kinetic sportura": (40, 90, 160),
-    "seiko flightmaster": (50, 120, 200),
-    "seiko kinetic": (30, 80, 130),
-    "seiko 7t62": (40, 100, 170),
-    "seiko sna411": (40, 100, 160),
-    "seiko sna413": (40, 100, 160),
-    "seiko tv case": (60, 150, 250),
-    "seiko tvcase": (60, 150, 250),
-    "seiko rectangle": (40, 100, 180),
-    "seiko lord matic": (40, 100, 180),
-    "seiko bellmatic": (50, 120, 200),
-    "seiko actus": (30, 80, 150),
-    "seiko seahorse": (30, 80, 150),
-    "seiko pogue": (80, 200, 350),
-    "seiko 6139": (50, 130, 220),
-    "seiko 5 automatic": (20, 60, 110),
+    "seiko kinetic sportura":("seiko", 40, 90, 160),
+    "seiko flightmaster":    ("seiko", 50, 120, 200),
+    "seiko kinetic":         ("seiko", 30, 80, 130),
+    "seiko 7t62":            ("seiko", 40, 100, 170),
+    "seiko sna411":          ("seiko", 40, 100, 160),
+    "seiko sna413":          ("seiko", 40, 100, 160),
+    "seiko tv case":         ("seiko", 60, 150, 250),
+    "seiko lord matic":      ("seiko", 40, 100, 180),
+    "seiko bellmatic":       ("seiko", 50, 120, 200),
+    "seiko actus":           ("seiko", 30, 80, 150),
+    "seiko seahorse":        ("seiko", 30, 80, 150),
+    "seiko 6139":            ("seiko", 50, 130, 220),
+    "seiko 5 automatic":     ("seiko", 20, 60, 110),
     # Citizen
-    "citizen promaster nighthawk": (80, 150, 220),
-    "citizen navihawk": (60, 140, 220),
-    "citizen wingman": (20, 60, 120),
+    "promaster nighthawk":   ("citizen", 80, 150, 220),
+    "navihawk":              ("citizen", 60, 140, 220),
+    "wingman":               ("citizen", 20, 60, 120),
     # LIP
-    "lip mach 2000": (80, 200, 350),
-    "montre lip mach": (60, 180, 320),
+    "mach 2000":             ("lip", 80, 200, 350),
+    "mach 2000 mini":        ("lip", 60, 160, 280),
+    "croix du sud":          ("lip", 60, 150, 260),
     # Yema
-    "yema flygraf": (100, 250, 450),
-    "yema rallygraf": (80, 200, 380),
-    "yema superman": (80, 220, 400),
-    "yema navygraf": (80, 200, 380),
-    # Swatch vintage
-    "swatch chrono scg": (20, 60, 120),
-    "swatch irony automatic": (25, 70, 130),
-    "swatch automatic": (25, 70, 130),
-    # Garel
-    "garel automatic": (30, 80, 150),
-    "garel vintage": (25, 70, 130),
-    "montre garel": (20, 60, 120),
+    "flygraf":               ("yema", 100, 250, 450),
+    "rallygraf":             ("yema", 80, 200, 380),
+    "superman":              ("yema", 80, 220, 400),
+    "navygraf":              ("yema", 80, 200, 380),
     # Longines
-    "longines automatic vintage": (80, 200, 380),
-    "longines conquest vintage": (100, 250, 450),
-    "longines ultra-chron": (80, 220, 400),
-    "longines admiral": (60, 160, 300),
-    "longines flagship vintage": (60, 150, 280),
+    "conquest":              ("longines", 100, 250, 450),
+    "ultra-chron":           ("longines", 80, 220, 400),
+    "admiral":               ("longines", 60, 160, 300),
+    "flagship":              ("longines", 60, 150, 280),
+    "30l":                   ("longines", 80, 200, 380),
     # Tissot
-    "tissot pr516": (60, 150, 280),
-    "tissot seastar vintage": (50, 130, 240),
-    "tissot navigator": (80, 200, 350),
-    "tissot visodate": (40, 100, 180),
-    "tissot sideral": (60, 160, 300),
-    # Outros
-    "sicura automatic": (30, 80, 160),
-    "casio vintage calculator": (15, 50, 90),
-    "casio dw5600": (20, 60, 110),
-    "casio royale": (20, 55, 100),
+    "pr516":                 ("tissot", 60, 150, 280),
+    "seastar":               ("tissot", 50, 130, 240),
+    "navigator":             ("tissot", 80, 200, 350),
+    "visodate":              ("tissot", 40, 100, 180),
+    "sideral":               ("tissot", 60, 160, 300),
+    # Garel
+    "garel automatic":       ("garel", 30, 80, 150),
+    "garel vintage":         ("garel", 25, 70, 130),
+    # Casio
+    "vintage calculator":    ("casio", 15, 50, 90),
+    "dw5600":                ("casio", 20, 60, 110),
+    "royale":                ("casio", 20, 55, 100),
+    "databank":              ("casio", 15, 45, 85),
 }
+
 
 CATALOG_IDS = {
     "PT": "97",
@@ -126,8 +135,8 @@ def run_scan():
             print("Erro scraper " + domain_label + ": " + str(e))
             continue
 
-        for keyword, (min_buy, max_buy, sell_target) in PRICE_DB.items():
-            print("  " + keyword)
+        for keyword, (brand, min_buy, max_buy, sell_target) in PRICE_DB.items():
+            print("  [" + brand + "] " + keyword)
             try:
                 params = {
                     "search_text": keyword,
@@ -135,8 +144,11 @@ def run_scan():
                     "price_from": "5",
                     "price_to": str(int(max_buy * 1.3)),
                     "currency": "EUR",
-                    "catalog[]": CATALOG_IDS.get(domain_label, "2285"),
+                    "catalog[]": "97",
                 }
+                brand_id = BRAND_IDS.get(brand, "")
+                if brand_id:
+                    params["brand_ids[]"] = brand_id
 
                 items = scraper.search(params)
                 if not items:
@@ -171,7 +183,7 @@ def run_scan():
                             photo = photo.get("url", "")
 
                         url = getattr(item, "url", "") or base_url + "/items/" + item_id
-                        brand = str(getattr(item, "brand_title", "") or "")
+                        item_brand = str(getattr(item, "brand_title", "") or brand)
 
                         results.append({
                             "id": item_id,
@@ -181,7 +193,7 @@ def run_scan():
                             "price": price,
                             "url": url,
                             "photo": str(photo),
-                            "brand": brand,
+                            "brand": item_brand,
                             "score": deal["score"],
                             "rating": deal["rating"],
                             "color": deal["color"],
