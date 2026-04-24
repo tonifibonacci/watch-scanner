@@ -8,7 +8,7 @@ Usage:
 """
 
 import sys
-from scanner import PRICE_DB
+from scraper import PRICE_DB
 from ebay_pricer import warm_cache, get_cache_stats
 
 force = "--force" in sys.argv
