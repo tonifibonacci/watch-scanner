@@ -10,7 +10,13 @@ try:
 except ImportError:
     SCRAPER_AVAILABLE = False
     print("vinted-scraper nao instalado")
-    
+
+try:
+    from ebay_pricer import get_market_price, get_cache_stats
+    EBAY_PRICER_AVAILABLE = True
+except ImportError:
+    EBAY_PRICER_AVAILABLE = False
+    print("ebay_pricer nao disponivel - usando precos estaticos")
 
 
 PRICE_DB = {
@@ -97,7 +103,6 @@ PRICE_DB = {
 }
 
 
-
 DOMAINS = [
     ("https://www.vinted.pt", "PT"),
     ("https://www.vinted.fr", "FR"),
@@ -141,6 +146,14 @@ def run_scan():
         print("ERRO: vinted-scraper nao disponivel")
         return results
 
+    # ── Print eBay cache coverage at start of scan ─────────────────────────────
+    if EBAY_PRICER_AVAILABLE:
+        stats = get_cache_stats(PRICE_DB)
+        print(
+            f"[eBay pricer] Cache: {stats['cached_fresh']}/{stats['total_keywords']} "
+            f"keywords ({stats['coverage_pct']}% cobertura)"
+        )
+
     for base_url, domain_label in DOMAINS:
         print("Vinted " + domain_label)
         try:
@@ -149,14 +162,35 @@ def run_scan():
             print("Erro scraper " + domain_label + ": " + str(e))
             continue
 
-        for keyword, (brand, min_buy, max_buy, sell_target) in PRICE_DB.items():
+        for keyword, (brand, min_buy, max_buy, static_sell_target) in PRICE_DB.items():
             print("  [" + brand + "] " + keyword)
+
+            # ── Resolve sell_target: eBay live price or static fallback ────────
+            if EBAY_PRICER_AVAILABLE:
+                sell_target, price_source = get_market_price(keyword, fallback=static_sell_target)
+                if sell_target is None:
+                    sell_target = static_sell_target
+                    price_source = "fallback"
+            else:
+                sell_target = static_sell_target
+                price_source = "static"
+
+            # ── Adjust buy thresholds proportionally if eBay price differs ────
+            # Keep the same margin ratios as the static PRICE_DB
+            if price_source in ("ebay", "cache") and static_sell_target > 0:
+                ratio = sell_target / static_sell_target
+                adj_min_buy = round(min_buy * ratio, 0)
+                adj_max_buy = round(max_buy * ratio, 0)
+            else:
+                adj_min_buy = min_buy
+                adj_max_buy = max_buy
+
             try:
                 params = {
                     "search_text": keyword,
                     "order": "newest_first",
                     "price_from": "5",
-                    "price_to": str(int(max_buy * 1.3)),
+                    "price_to": str(int(adj_max_buy * 1.3)),
                     "currency": "EUR",
                     "catalog[]": "97",
                 }
@@ -178,7 +212,6 @@ def run_scan():
                         title = str(getattr(item, "title", "") or "")
                         item_brand = str(getattr(item, "brand_title", "") or "").lower()
 
-                        # Filtra por marca — só aceita se a marca do item corresponder
                         if item_brand and brand not in item_brand:
                             continue
 
@@ -189,7 +222,7 @@ def run_scan():
                         if price <= 0:
                             continue
 
-                        deal = score_deal(price, min_buy, max_buy, sell_target)
+                        deal = score_deal(price, adj_min_buy, adj_max_buy, sell_target)
                         if deal["score"] < 1:
                             continue
 
@@ -215,8 +248,9 @@ def run_scan():
                             "color": deal["color"],
                             "margin_pct": deal["margin_pct"],
                             "sell_target": deal["sell_target"],
-                            "min_buy": min_buy,
-                            "max_buy": max_buy,
+                            "min_buy": adj_min_buy,
+                            "max_buy": adj_max_buy,
+                            "price_source": price_source,   # NEW: shows data origin in JSON
                             "scanned_at": datetime.utcnow().isoformat(),
                         })
                         found += 1
@@ -242,6 +276,9 @@ def generate_html(results, output_path):
     excellent = sum(1 for r in results if r["score"] == 3)
     good = sum(1 for r in results if r["score"] == 2)
 
+    ebay_count = sum(1 for r in results if r.get("price_source") in ("ebay", "cache"))
+    static_count = total - ebay_count
+
     cards_html = ""
     if not results:
         cards_html = '<div class="empty"><div class="empty-icon">&#8987;</div><p>Nenhum resultado encontrado neste scan.</p><p class="empty-sub">A Vinted pode estar a bloquear temporariamente. Tenta mais tarde.</p></div>'
@@ -257,13 +294,21 @@ def generate_html(results, output_path):
                 margin_str = str(r["margin_pct"]) + "%"
             emoji_map = {"EXCELENTE": "🔥", "BOM": "✅", "RAZOAVEL": "⚠️"}
             emoji = emoji_map.get(r["rating"], "")
+
+            # Price source badge: live eBay vs static
+            src = r.get("price_source", "static")
+            if src in ("ebay", "cache"):
+                src_badge = '<span class="price-src ebay">eBay live</span>'
+            else:
+                src_badge = '<span class="price-src static">preço est.</span>'
+
             cards_html += (
                 '<a class="card score-' + str(r["score"]) + '" href="' + r["url"] + '" target="_blank" rel="noopener">'
                 '<div class="card-photo">' + photo_html + '</div>'
                 '<div class="card-body">'
                 '<div class="card-badge" style="background:' + r["color"] + '">' + emoji + ' ' + r["rating"] + '</div>'
                 '<h3 class="card-title">' + r["title"] + '</h3>'
-                '<div class="card-meta"><span class="card-brand">' + r["brand"] + '</span><span class="card-domain">' + r["domain"] + '</span></div>'
+                '<div class="card-meta"><span class="card-brand">' + r["brand"] + '</span><span class="card-domain">' + r["domain"] + '</span>' + src_badge + '</div>'
                 '<div class="card-keyword">🔍 ' + r["keyword"] + '</div>'
                 '<div class="card-prices">'
                 '<div class="price-main">€' + str(int(r["price"])) + '</div>'
@@ -272,6 +317,9 @@ def generate_html(results, output_path):
                 '<div class="price-range">Comprar ate €' + str(int(r["max_buy"])) + ' para margem</div>'
                 '</div></a>'
             )
+
+    # Stats bar: add eBay coverage indicator
+    ebay_pct = round(ebay_count / total * 100) if total else 0
 
     html = (
         '<!DOCTYPE html>'
@@ -292,7 +340,7 @@ def generate_html(results, output_path):
         '.stats{display:flex;gap:1px;background:var(--border);border:1px solid var(--border);border-radius:12px;overflow:hidden;margin:2rem 2.5rem}'
         '.stat{flex:1;background:var(--surface);padding:1.25rem 1.5rem;text-align:center}'
         '.stat-val{font-family:var(--mono);font-size:2rem;font-weight:700;margin-bottom:.35rem}'
-        '.stat-val.fire{color:#00ff88}.stat-val.good{color:#7fff7f}.stat-val.total{color:var(--accent)}'
+        '.stat-val.fire{color:#00ff88}.stat-val.good{color:#7fff7f}.stat-val.total{color:var(--accent)}.stat-val.ebay{color:#4fc3f7}'
         '.stat-label{font-size:.7rem;color:var(--text-dim);text-transform:uppercase;letter-spacing:.12em}'
         '.search-bar{padding:0 2.5rem 1rem;}'
         '.search-input{width:100%;background:var(--surface);border:1px solid var(--border);color:var(--text);padding:.75rem 1.25rem;border-radius:8px;font-size:.9rem;font-family:var(--sans);outline:none;transition:border-color .15s}'
@@ -311,9 +359,12 @@ def generate_html(results, output_path):
         '.card-body{padding:1.25rem;display:flex;flex-direction:column;gap:.6rem;flex:1}'
         '.card-badge{display:inline-block;font-size:.65rem;font-weight:700;font-family:var(--mono);padding:.25rem .6rem;border-radius:4px;color:#000;align-self:flex-start}'
         '.card-title{font-size:.9rem;font-weight:500;line-height:1.4}'
-        '.card-meta{display:flex;gap:.5rem;align-items:center}'
+        '.card-meta{display:flex;gap:.5rem;align-items:center;flex-wrap:wrap}'
         '.card-brand{font-size:.7rem;font-weight:600;color:var(--accent);text-transform:uppercase;letter-spacing:.08em}'
         '.card-domain{font-size:.65rem;background:var(--surface2);border:1px solid var(--border);color:var(--text-dim);padding:.15rem .5rem;border-radius:4px;font-family:var(--mono)}'
+        '.price-src{font-size:.6rem;padding:.15rem .45rem;border-radius:4px;font-family:var(--mono);font-weight:700}'
+        '.price-src.ebay{background:rgba(79,195,247,.15);color:#4fc3f7;border:1px solid rgba(79,195,247,.3)}'
+        '.price-src.static{background:var(--surface2);color:var(--text-dim);border:1px solid var(--border)}'
         '.card-keyword{font-size:.68rem;color:var(--text-dim);font-style:italic}'
         '.card-prices{margin-top:auto;display:flex;align-items:baseline;gap:1rem;padding-top:.75rem;border-top:1px solid var(--border)}'
         '.price-main{font-family:var(--mono);font-size:1.5rem;font-weight:700}'
@@ -324,7 +375,6 @@ def generate_html(results, output_path):
         '.empty-icon{font-size:3rem;margin-bottom:1rem;opacity:.3}'
         '.empty-sub{color:var(--text-dim);font-size:.85rem;margin-top:.5rem}'
         '.no-results{grid-column:1/-1;text-align:center;padding:3rem;color:var(--text-dim);font-family:var(--mono);font-size:.85rem}'
-        'footer{padding:2rem 2.5rem;border-top:1px solid var(--border);display:flex;justify-content:space-between;font-size:.72rem;color:var(--text-dim);font-family:var(--mono);flex-wrap:wrap;gap:.5rem}'
         '.hidden{display:none!important}'
         '</style>'
         '</head>'
@@ -337,6 +387,7 @@ def generate_html(results, output_path):
         '<div class="stat"><div class="stat-val total">' + str(total) + '</div><div class="stat-label">Total</div></div>'
         '<div class="stat"><div class="stat-val fire">' + str(excellent) + '</div><div class="stat-label">🔥 Excelente</div></div>'
         '<div class="stat"><div class="stat-val good">' + str(good) + '</div><div class="stat-label">✅ Bom negocio</div></div>'
+        '<div class="stat"><div class="stat-val ebay">' + str(ebay_pct) + '%</div><div class="stat-label">📊 Precos eBay</div></div>'
         '</div>'
         '<div class="search-bar">'
         '<input class="search-input" type="text" id="searchInput" placeholder="Pesquisar por titulo, marca, keyword..." oninput="applyFilters()">'
