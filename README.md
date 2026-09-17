@@ -22,3 +22,4 @@ Corre de 2 em 2 horas via GitHub Actions e publica um dashboard HTML.
 - A Vinted pode bloquear pedidos ocasionalmente — é normal, o próximo scan funciona
 - Os preços de venda são estimativas baseadas em Chrono24/eBay — **verifica sempre antes de comprar**
 - O GitHub Actions gratuito tem 2000 minutos/mês — mais que suficiente para este uso
+- visit https://tonifibonacci.github.io/watch-scanner/
